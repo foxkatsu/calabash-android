@@ -20,7 +20,7 @@ import sh.calaba.org.codehaus.jackson.map.ObjectMapper;
  *
  * @author jorge.pelaez
  */
-public class SMSAction extends Activity implements Action {
+public class SMSAction implements Action {
 
     public static final String ADDRESS = "address";
     public static final String PERSON = "person";
@@ -31,14 +31,20 @@ public class SMSAction extends Activity implements Action {
     public static final String BODY = "body";
     public static final String SEEN = "seen";
 
-    public Result execute(String... args) {        
-        
+    private ContentResolver contentResolver;
+
+    public SMSAction(ContentResolver contentResolver) {
+        this.contentResolver = contentResolver;
+    }
+
+    public Result execute(String... args) {
+
         ObjectMapper mapper = new ObjectMapper();
         List<SMSData> data = getSMSList();
         if (data != null) {
             try {
                 String resultData = mapper.writeValueAsString(data);
-                Result result=Result.successResult();
+                Result result = Result.successResult();
                 result.addBonusInformation(resultData);
                 return result;
             } catch (IOException ex) {
@@ -50,27 +56,32 @@ public class SMSAction extends Activity implements Action {
 
     private List<SMSData> getSMSList() {
         ContentResolver contentResolver = getContentResolver();
-        Cursor cursor = contentResolver.query(Uri.parse("content://sms/inbox"), null, null, null, null);
-
-        if (!cursor.moveToFirst()) {
-            return null;
-        }
-
         List<SMSData> result = new ArrayList<SMSData>();
+        
+        if (contentResolver != null) {
+            Cursor cursor = contentResolver.query(Uri.parse("content://sms/inbox"), null, null, null, null);
 
-        do {
-            SMSData aux = new SMSData();
-            aux.setSender(cursor.getString(cursor.getColumnIndex(BODY)));
-            aux.setText(cursor.getString(cursor.getColumnIndex(ADDRESS)));
-            aux.setTime(cursor.getString(cursor.getColumnIndex(DATE)));
-            result.add(aux);
-        } while (cursor.moveToNext());
+            if (!cursor.moveToFirst()) {
+                return null;
+            }
 
+            do {
+                SMSData aux = new SMSData();
+                aux.setSender(cursor.getString(cursor.getColumnIndex(BODY)));
+                aux.setText(cursor.getString(cursor.getColumnIndex(ADDRESS)));
+                aux.setTime(cursor.getString(cursor.getColumnIndex(DATE)));
+                result.add(aux);
+            } while (cursor.moveToNext());
+        }
         return result;
     }
 
     public String key() {
         return "read_sms";
+    }
+
+    private ContentResolver getContentResolver() {
+        return contentResolver;
     }
 
 }

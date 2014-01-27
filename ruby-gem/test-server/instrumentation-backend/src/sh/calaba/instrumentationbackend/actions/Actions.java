@@ -7,11 +7,8 @@ import java.util.Map;
 
 import sh.calaba.instrumentationbackend.InstrumentationBackend;
 import android.app.Instrumentation;
-import android.content.ComponentName;
+import android.content.ContentResolver;
 import android.content.Context;
-import android.content.pm.InstrumentationInfo;
-import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.test.InstrumentationTestCase;
 
 public class Actions {
@@ -27,14 +24,16 @@ public class Actions {
         this.context = parentInstrumentation.getContext();
         loadActions();
     }
-    
+
     private void loadActions() {
         try {
             BufferedReader reader = new BufferedReader(new InputStreamReader(context.getAssets().open("actions")));
             try {
                 for (String line = reader.readLine(); line != null; line = reader.readLine()) {
                     String name = line.trim();
-                    if (name.length() > 0) addAction(name);
+                    if (name.length() > 0) {
+                        addAction(name);
+                    }
                 }
             } finally {
                 reader.close();
@@ -48,7 +47,11 @@ public class Actions {
     private void addAction(String className) throws Exception {
         Class action = Class.forName(className);
         if (isAction(action)) {
-            put((Action) action.newInstance());
+            if (action.getConstructor(ContentResolver.class) != null) {                
+                put ((Action)action.getConstructor(ContentResolver.class).newInstance(context.getContentResolver()));
+            } else {
+                put((Action) action.newInstance());
+            }
         }
     }
 
